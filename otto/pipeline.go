@@ -14,13 +14,7 @@
 
 package otto
 
-import (
-	"go.opentelemetry.io/collector/component"
-)
-
 type pipeline struct {
-	factories component.Factories
-
 	metricsReceiverWrapper  *metricsReceiverWrapper
 	metricsProcessorWrapper *metricsProcessorWrapper
 	metricsExporterWrapper  *metricsExporterWrapper

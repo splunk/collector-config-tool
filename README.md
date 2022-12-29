@@ -14,8 +14,9 @@ To start Otto:
 
 1) Download or clone a copy of the collector-config-tool.
 2) Make sure the current working directory is the root of this source tree.
-3) Run `go run ./cmd/otto`
-4) Open localhost:8888 in a desktop browser (only Chrome is officially supported at this time, though other browsers may also work).
+3) Run `make otelcol`
+4) Run `bin/otel --config example/config.yaml`
+4) Open localhost:8000 in a desktop browser (only Chrome is officially supported at this time, though other browsers may also work).
 
 ## Creating a component configuration
 

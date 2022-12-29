@@ -16,39 +16,39 @@ package otto
 
 import (
 	"encoding/json"
+	"go.uber.org/zap"
 	"io"
-	"log"
 	"net/http"
 
 	"gopkg.in/yaml.v3"
 )
 
 type jsonToYAMLHandler struct {
-	logger *log.Logger
+	logger *zap.Logger
 }
 
-func (h jsonToYAMLHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (h *jsonToYAMLHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	bytes, err := io.ReadAll(req.Body)
 	if err != nil {
-		h.logger.Printf("jsonToYAMLHandler: ServeHTTP: error reading request: %v", err)
+		h.logger.Info("jsonToYAMLHandler: ServeHTTP: error reading request", zap.Error(err))
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	m := map[string]interface{}{}
 	err = json.Unmarshal(bytes, &m)
 	if err != nil {
-		h.logger.Printf("jsonToYAMLHandler: ServeHTTP: error unmarshaling request: %v", err)
+		h.logger.Info("jsonToYAMLHandler: ServeHTTP: error unmarshaling request", zap.Error(err))
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	yml, err := yaml.Marshal(m)
 	if err != nil {
-		h.logger.Printf("jsonToYAMLHandler: ServeHTTP: error converting JSON to YAML: %v", err)
+		h.logger.Info("jsonToYAMLHandler: ServeHTTP: error converting JSON to YAML", zap.Error(err))
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	_, err = resp.Write(yml)
 	if err != nil {
-		h.logger.Printf("jsonToYAMLHandler: ServeHTTP: error writing response: %v", err)
+		h.logger.Info("jsonToYAMLHandler: ServeHTTP: error writing response", zap.Error(err))
 	}
 }

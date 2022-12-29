@@ -16,19 +16,18 @@ package otto
 
 import (
 	"context"
-	"log"
-
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 )
 
 type receiverSocketHandler struct {
-	logger          *log.Logger
+	host            component.Host
+	logger          *zap.Logger
 	pipeline        *pipeline
-	receiverFactory component.ReceiverFactory
+	receiverFactory receiver.Factory
 }
 
 func (h receiverSocketHandler) handle(ws *websocket.Conn) {
@@ -61,7 +60,7 @@ func (h receiverSocketHandler) doHandle(ws *websocket.Conn) error {
 
 func (h receiverSocketHandler) startMetricsReceiver(
 	ws *websocket.Conn,
-	cfg config.Receiver,
+	cfg component.Config,
 ) {
 	wrapper, err := newMetricsReceiverWrapper(h.logger, ws, cfg, h.receiverFactory)
 	if err != nil {
@@ -69,7 +68,7 @@ func (h receiverSocketHandler) startMetricsReceiver(
 		return
 	}
 	h.pipeline.connectMetricsReceiverWrapper(wrapper)
-	err = wrapper.Start(context.Background(), componenttest.NewNopHost())
+	err = wrapper.Start(context.Background(), h.host)
 	if err != nil {
 		sendErr(ws, h.logger, "failed to start metrics receiver", err)
 		return
@@ -85,7 +84,7 @@ func (h receiverSocketHandler) startMetricsReceiver(
 
 func (h receiverSocketHandler) startLogsReceiver(
 	ws *websocket.Conn,
-	cfg config.Receiver,
+	cfg component.Config,
 ) {
 	wrapper, err := newLogsReceiverWrapper(h.logger, ws, cfg, h.receiverFactory)
 	if err != nil {
@@ -93,7 +92,7 @@ func (h receiverSocketHandler) startLogsReceiver(
 		return
 	}
 	h.pipeline.connectLogsReceiverWrapper(wrapper)
-	err = wrapper.Start(context.Background(), componenttest.NewNopHost())
+	err = wrapper.Start(context.Background(), h.host)
 	if err != nil {
 		sendErr(ws, h.logger, "failed to start logs receiver", err)
 		return
@@ -109,7 +108,7 @@ func (h receiverSocketHandler) startLogsReceiver(
 
 func (h receiverSocketHandler) startTracesReceiver(
 	ws *websocket.Conn,
-	cfg config.Receiver,
+	cfg component.Config,
 ) {
 	wrapper, err := newTracesReceiverWrapper(h.logger, ws, cfg, h.receiverFactory)
 	if err != nil {
@@ -117,7 +116,7 @@ func (h receiverSocketHandler) startTracesReceiver(
 		return
 	}
 	h.pipeline.connectTracesReceiverWrapper(wrapper)
-	err = wrapper.Start(context.Background(), componenttest.NewNopHost())
+	err = wrapper.Start(context.Background(), h.host)
 	if err != nil {
 		sendErr(ws, h.logger, "failed to start traces receiver", err)
 		return
@@ -131,9 +130,9 @@ func (h receiverSocketHandler) startTracesReceiver(
 	h.pipeline.disconnectTracesReceiverWrapper()
 }
 
-func unmarshalReceiverConfig(receiverConfig config.Receiver, conf *confmap.Conf) error {
+func unmarshalReceiverConfig(receiverConfig component.Config, conf *confmap.Conf) error {
 	if unmarshallable, ok := receiverConfig.(confmap.Unmarshaler); ok {
 		return unmarshallable.Unmarshal(conf)
 	}
-	return conf.UnmarshalExact(receiverConfig)
+	return conf.Unmarshal(receiverConfig)
 }

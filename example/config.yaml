@@ -1,0 +1,37 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+
+processors:
+  batch:
+
+exporters:
+  otlp:
+    endpoint: "https://example.com"
+
+extensions:
+  health_check:
+  pprof:
+    endpoint: :1888
+  zpages:
+    endpoint: :55679
+  otto:
+    endpoint: :8000
+    receivers:
+      - filelog
+    processors:
+      - batch
+    exporters:
+      - otlp
+      - kafka
+      - logging
+      - file
+
+service:
+  extensions: [pprof, zpages, health_check, otto]
+  pipelines:
+    metrics:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp ]

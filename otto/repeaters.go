@@ -18,28 +18,27 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 )
 
 type metricsRepeater struct {
-	logger    *log.Logger
+	logger    *zap.Logger
 	ws        *websocket.Conn
 	marshaler pmetric.Marshaler
 	next      consumer.Metrics
 	stop      chan struct{}
 }
 
-func newMetricsRepeater(logger *log.Logger, ws *websocket.Conn) *metricsRepeater {
+func newMetricsRepeater(logger *zap.Logger, ws *websocket.Conn) *metricsRepeater {
 	return &metricsRepeater{
 		logger:    logger,
 		ws:        ws,
-		marshaler: pmetric.NewJSONMarshaler(),
+		marshaler: &pmetric.JSONMarshaler{},
 		stop:      make(chan struct{}),
 	}
 }
@@ -55,7 +54,7 @@ func (*metricsRepeater) Capabilities() consumer.Capabilities {
 func (r *metricsRepeater) ConsumeMetrics(ctx context.Context, pmetrics pmetric.Metrics) error {
 	err := doWritePayload(r.ws, metrics(pmetrics), r.stop)
 	if err != nil {
-		r.logger.Printf("metricsRepeater: %v", err)
+		r.logger.Error("metricsRepeater", zap.Error(err))
 		return nil
 	}
 	if r.next == nil {
@@ -69,18 +68,18 @@ func (r *metricsRepeater) waitForStopMessage() {
 }
 
 type logsRepeater struct {
-	logger    *log.Logger
+	logger    *zap.Logger
 	ws        *websocket.Conn
 	marshaler plog.Marshaler
 	next      consumer.Logs
 	stop      chan struct{}
 }
 
-func newLogsRepeater(logger *log.Logger, ws *websocket.Conn) *logsRepeater {
+func newLogsRepeater(logger *zap.Logger, ws *websocket.Conn) *logsRepeater {
 	return &logsRepeater{
 		logger:    logger,
 		ws:        ws,
-		marshaler: plog.NewJSONMarshaler(),
+		marshaler: &plog.JSONMarshaler{},
 		stop:      make(chan struct{}),
 	}
 }
@@ -96,7 +95,7 @@ func (r *logsRepeater) waitForStopMessage() {
 func (r *logsRepeater) ConsumeLogs(ctx context.Context, plogs plog.Logs) error {
 	err := doWritePayload(r.ws, logs(plogs), r.stop)
 	if err != nil {
-		r.logger.Printf("logsRepeater: %v\n", err)
+		r.logger.Error("logsRepeater", zap.Error(err))
 		return nil
 	}
 	if r.next == nil {
@@ -110,18 +109,18 @@ func (r *logsRepeater) setNext(next consumer.Logs) {
 }
 
 type tracesRepeater struct {
-	logger    *log.Logger
+	logger    *zap.Logger
 	ws        *websocket.Conn
 	marshaler ptrace.Marshaler
 	next      consumer.Traces
 	stop      chan struct{}
 }
 
-func newTracesRepeater(logger *log.Logger, ws *websocket.Conn) *tracesRepeater {
+func newTracesRepeater(logger *zap.Logger, ws *websocket.Conn) *tracesRepeater {
 	return &tracesRepeater{
 		logger:    logger,
 		ws:        ws,
-		marshaler: ptrace.NewJSONMarshaler(),
+		marshaler: &ptrace.JSONMarshaler{},
 		stop:      make(chan struct{}),
 	}
 }
@@ -133,7 +132,7 @@ func (r *tracesRepeater) Capabilities() consumer.Capabilities {
 func (r *tracesRepeater) ConsumeTraces(ctx context.Context, ptraces ptrace.Traces) error {
 	err := doWritePayload(r.ws, traces(ptraces), r.stop)
 	if err != nil {
-		r.logger.Printf("tracesRepeater: %v\n", err)
+		r.logger.Error("tracesRepeater", zap.Error(err))
 		return nil
 	}
 	if r.next == nil {

@@ -16,20 +16,22 @@ package otto
 
 import (
 	"encoding/json"
-	"log"
-
 	"go.opentelemetry.io/collector/confmap"
+	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 	"gopkg.in/yaml.v3"
 )
 
-func sendErr(ws *websocket.Conn, logger *log.Logger, msg string, err error) {
+func sendErr(ws *websocket.Conn, logger *zap.Logger, msg string, err error) {
 	envelopeJson, jsonErr := json.Marshal(wsMessageEnvelope{Error: err})
 	if jsonErr != nil {
-		const fmt = "%s due to %v. also failed to marshal envelope containing the error due to %v"
-		logger.Fatalf(fmt, msg, err, jsonErr)
+		logger.Error("failed to marshal envelope containing the error", zap.String("msg", msg),
+			zap.NamedError("error", err), zap.NamedError("JSON error", jsonErr))
 	}
 	_, err = ws.Write(envelopeJson)
+	if err != nil {
+		logger.Error("error sending error", zap.Error(err))
+	}
 }
 
 func readSocket(ws *websocket.Conn) (string, *confmap.Conf, error) {
